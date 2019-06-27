@@ -42,6 +42,7 @@
 #include "conn/conn.h"
 #include "gui/lib.h"
 #include "mutt.h"
+#include "debug/lib.h"
 #include "index.h"
 #include "alias.h"
 #include "browser.h"
@@ -1723,6 +1724,9 @@ int mutt_index_menu(struct MuttWindow *dlg)
         }
 
         log_queue_save(fp);
+#ifdef USE_DEVEL_GRAPHVIZ
+        dump_graphviz("index");
+#endif
         mutt_file_fclose(&fp);
 
         mutt_do_pager("messages", tempfile, MUTT_PAGER_LOGS, NULL);
