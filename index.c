@@ -3991,6 +3991,7 @@ struct MuttWindow *index_pager_init(void)
       mutt_window_new(MUTT_WIN_ORIENT_HORIZONTAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
   dlg->type = WT_DIALOG;
+  dlg->name = "index";
   struct MuttWindow *cont_right =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
@@ -3998,10 +3999,12 @@ struct MuttWindow *index_pager_init(void)
   struct MuttWindow *panel_index =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
+  panel_index->name = "index panel";
   panel_index->type = WT_CONTAINER;
   struct MuttWindow *panel_pager =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
+  panel_pager->name = "pager panel";
   panel_pager->type = WT_CONTAINER;
   panel_pager->state.visible = false; // The Pager and Pager Bar are initially hidden
 

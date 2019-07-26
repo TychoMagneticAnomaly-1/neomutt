@@ -636,6 +636,7 @@ void mix_make_chain(struct MuttWindow *win, struct ListHead *chainhead, int cols
   struct MuttWindow *dlg =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
+  dlg->name = "remailer";
   dlg->type = WT_DIALOG;
   struct MuttWindow *index =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,

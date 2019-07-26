@@ -57,7 +57,6 @@
 #include "alias.h"
 #include "browser.h"
 #include "context.h"
-#include "debug/lib.h"
 #include "globals.h"
 #include "hook.h"
 #include "index.h"

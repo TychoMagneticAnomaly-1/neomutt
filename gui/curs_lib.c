@@ -670,6 +670,7 @@ int mutt_do_pager(const char *banner, const char *tempfile, PagerFlags do_color,
   struct MuttWindow *dlg =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
+  dlg->name = "do-pager";
   dlg->type = WT_DIALOG;
   struct MuttWindow *pager =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,

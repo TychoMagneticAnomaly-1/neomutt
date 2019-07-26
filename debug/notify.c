@@ -179,7 +179,8 @@ void notify_dump_config(struct NotifyCallback *nc)
 
   struct Buffer value = mutt_buffer_make(128);
   cs_he_string_get(ev_c->cs, ev_c->he, &value);
-  mutt_debug(LL_DEBUG1, "\tConfig: %s %s = %s\n", get_config_type(nc->event_subtype), ev_c->name, mutt_b2s(&value));
+  mutt_debug(LL_DEBUG1, "\tConfig: %s %s = %s\n",
+             get_config_type(nc->event_subtype), ev_c->name, mutt_b2s(&value));
   mutt_buffer_dealloc(&value);
 }
 

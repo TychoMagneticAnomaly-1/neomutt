@@ -555,6 +555,7 @@ static struct SmimeKey *smime_select_key(struct SmimeKey *keys, char *query)
   struct MuttWindow *dlg =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
                       MUTT_WIN_SIZE_UNLIMITED, MUTT_WIN_SIZE_UNLIMITED);
+  dlg->name = "smime";
   dlg->type = WT_DIALOG;
   struct MuttWindow *index =
       mutt_window_new(MUTT_WIN_ORIENT_VERTICAL, MUTT_WIN_SIZE_MAXIMISE,
