@@ -57,6 +57,7 @@
 #include "alias.h"
 #include "browser.h"
 #include "context.h"
+#include "debug/lib.h"
 #include "globals.h"
 #include "hook.h"
 #include "index.h"
@@ -543,6 +544,7 @@ int main(int argc, char *argv[], char *envp[])
   NeoMutt = neomutt_new(Config);
 
   notify_set_parent(Config->notify, NeoMutt->notify);
+  notify_observer_add(NeoMutt->notify, debug_notify_observer, NULL);
 
   if (!get_user_info(Config))
     goto main_exit;
