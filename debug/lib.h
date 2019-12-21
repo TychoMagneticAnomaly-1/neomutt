@@ -52,6 +52,7 @@ void test_parse_set(void);
 // Window
 void        debug_win_dump(void);
 void        win_dump      (struct MuttWindow *win, int indent);
+void        win_serialise (struct MuttWindow *win, struct Buffer *buf);
 const char *win_size      (struct MuttWindow *win);
 const char *win_type      (struct MuttWindow *win);
 

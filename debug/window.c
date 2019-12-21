@@ -72,8 +72,29 @@ void win_dump(struct MuttWindow *win, int indent)
   }
 }
 
+void win_serialise(struct MuttWindow *win, struct Buffer *buf)
+{
+  if (!mutt_window_is_visible(win))
+    return;
+
+  mutt_buffer_add_printf(buf, "<%s {%dx,%dy} [%dC,%dR]", win_size(win),
+                         win->state.col_offset, win->state.row_offset,
+                         win->state.cols, win->state.rows);
+  struct MuttWindow *np = NULL;
+  TAILQ_FOREACH(np, &win->children, entries)
+  {
+    win_serialise(np, buf);
+  }
+  mutt_buffer_addstr(buf, ">");
+}
+
 void debug_win_dump(void)
 {
   mutt_debug(LL_DEBUG1, "\n");
   win_dump(RootWindow, 0);
+  mutt_debug(LL_DEBUG1, "\n");
+  struct Buffer buf = mutt_buffer_make(1024);
+  win_serialise(RootWindow, &buf);
+  mutt_debug(LL_DEBUG1, "%s\n", mutt_b2s(&buf));
+  mutt_buffer_dealloc(&buf);
 }
