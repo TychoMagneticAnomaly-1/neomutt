@@ -361,8 +361,8 @@ void cs_notify_observers(const struct ConfigSet *cs, struct HashElem *he,
   if (!cs || !he || !name)
     return;
 
-  struct EventConfig ec = { cs, he, name };
-  notify_send(cs->notify, NT_CONFIG, ev, &ec);
+  // struct EventConfig ec = { SET_SCOPE_NEOMUTT, NULL, name, he, cs };
+  // notify_send(cs->notify, NT_CONFIG, ev, &ec);
 }
 
 /**

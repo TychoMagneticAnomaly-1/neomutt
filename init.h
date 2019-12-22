@@ -4636,7 +4636,7 @@ struct ConfigDef MuttVars[] = {
   ** When \fIset\fP, the internal-pager will pad blank lines to the bottom of the
   ** screen with a tilde ("~").
   */
-  { "time_inc", DT_NUMBER|DT_NOT_NEGATIVE, &C_TimeInc, 0 },
+  { "time_inc", DT_NUMBER|DT_NOT_NEGATIVE|DT_INHERIT_ACC|DT_INHERIT_MBOX, &C_TimeInc, 0 },
   /*
   ** .pp
   ** Along with $$read_inc, $$write_inc, and $$net_inc, this

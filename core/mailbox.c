@@ -73,6 +73,7 @@ void mailbox_free(struct Mailbox **ptr)
     m->free_mdata(&m->mdata);
 
   mutt_buffer_dealloc(&m->pathbuf);
+  cs_subset_free(&m->sub);
   FREE(&m->name);
   FREE(&m->realpath);
   FREE(&m->emails);
@@ -208,6 +209,7 @@ bool mailbox_set_subset(struct Mailbox *m, struct ConfigSubset *sub)
   if (!m || m->sub || !sub)
     return false;
 
-  m->sub = cs_subset_new(m->name, sub);
+  m->sub = cs_subset_new(m->name, sub, m->notify);
+  m->sub->scope = SET_SCOPE_MAILBOX;
   return true;
 }

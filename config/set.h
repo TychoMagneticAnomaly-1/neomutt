@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "subset.h"
 
 struct Buffer;
 struct ConfigSet;
@@ -189,18 +190,6 @@ struct ConfigSet
   struct Hash *hash;              ///< HashTable storing the config items
   struct ConfigSetType types[18]; ///< All the defined config types
   struct Notify *notify;          ///< Notifications system
-};
-
-/**
- * struct EventConfig - A config-change event
- *
- * Events such as #NT_CONFIG_SET
- */
-struct EventConfig
-{
-  const struct ConfigSet *cs; ///< Config set
-  struct HashElem *he;        ///< Config item that changed
-  const char *name;           ///< Name of config item that changed
 };
 
 struct ConfigSet *cs_new(size_t size);

@@ -29,16 +29,40 @@ struct Buffer;
 struct HashElem;
 
 /**
+ * enum ConfigScope - Who does this Config belong to?
+ */
+enum ConfigScope
+{
+  SET_SCOPE_NEOMUTT, ///< This Config is NeoMutt-specific (global)
+  SET_SCOPE_ACCOUNT, ///< This Config is Account-specific
+  SET_SCOPE_MAILBOX, ///< This Config is Mailbox-specific
+};
+
+/**
  * struct ConfigSubset - A set of inherited config items
  */
 struct ConfigSubset
 {
-  char *name;                  ///< Scope name of Subset
+  const char *name;            ///< Scope name of Subset
+  enum ConfigScope scope;      ///< Scope of Subset, e.g. #SET_SCOPE_ACCOUNT
   struct ConfigSubset *parent; ///< Parent Subset
   struct ConfigSet *cs;        ///< Parent ConfigSet
+  struct Notify *notify;       ///< Notifications system
 };
 
-struct ConfigSubset *cs_subset_new       (const char *name, struct ConfigSubset *parent);
+/**
+ * struct EventConfig - A config-change event
+ *
+ * Events such as #NT_CONFIG_SET
+ */
+struct EventConfig
+{
+  const struct ConfigSubset *sub;
+  const char *name;           ///< Name of config item that changed
+  struct HashElem *he;        ///< Config item that changed
+};
+
+struct ConfigSubset *cs_subset_new       (const char *name, struct ConfigSubset *sub_parent, struct Notify *not_parent);
 void                 cs_subset_free      (struct ConfigSubset **ptr);
 struct HashElem *    cs_subset_lookup    (const struct ConfigSubset *sub, const char *name);
 struct HashElem *    cs_subset_create_var(const struct ConfigSubset *sub, const char *name, struct Buffer *err);

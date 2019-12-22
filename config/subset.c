@@ -37,6 +37,23 @@
 #include "set.h"
 
 /**
+ * get_base - Find the root Config Item
+ * @param he Config Item to examine
+ * @retval ptr Root Config Item
+ *
+ * Given an inherited HashElem, find the HashElem representing the original
+ * Config Item.
+ */
+static struct HashElem *get_base(struct HashElem *he)
+{
+  if (!(he->type & DT_INHERITED))
+    return he;
+
+  struct Inheritance *i = he->data;
+  return get_base(i->parent);
+}
+
+/**
  * cs_subset_free - Free a Config Subset
  * @param ptr Subset to free
  *
@@ -71,6 +88,7 @@ void cs_subset_free(struct ConfigSubset **ptr)
     FREE(&list);
   }
 
+  notify_free(&sub->notify);
   FREE(&sub->name);
   FREE(ptr);
 }
@@ -78,32 +96,36 @@ void cs_subset_free(struct ConfigSubset **ptr)
 /**
  * cs_subset_new - Create a new Config Subset
  * @param name   Name for this Subset
- * @param parent Parent Subset
+ * @param sub_parent Parent Subset
+ * @param not_parent Parent Notification
  * @retval ptr New Subset
  *
  * @note The name will be combined with the parent's names
  */
-struct ConfigSubset *cs_subset_new(const char *name, struct ConfigSubset *parent)
+struct ConfigSubset *cs_subset_new(const char *name, struct ConfigSubset *sub_parent, struct Notify *not_parent)
 {
   struct ConfigSubset *sub = mutt_mem_calloc(1, sizeof(*sub));
 
-  if (parent)
+  if (sub_parent)
   {
-    sub->parent = parent;
-    sub->cs = parent->cs;
+    sub->parent = sub_parent;
+    sub->cs = sub_parent->cs;
   }
 
   if (name)
   {
     char scope[256];
 
-    if (parent && parent->name)
-      snprintf(scope, sizeof(scope), "%s:%s", parent->name, name);
+    if (sub_parent && sub_parent->name)
+      snprintf(scope, sizeof(scope), "%s:%s", sub_parent->name, name);
     else
       mutt_str_strfcpy(scope, name, sizeof(scope));
 
     sub->name = mutt_str_strdup(scope);
   }
+
+  sub->notify = notify_new();
+  notify_set_parent(sub->notify, not_parent);
 
   return sub;
 }
@@ -159,7 +181,14 @@ int cs_subset_native_set(const struct ConfigSubset *sub, struct HashElem *he,
   if (!sub || !he)
     return CSR_ERR_CODE;
 
-  return cs_he_native_set(sub->cs, he, value, err);
+  int rc = cs_he_native_set(sub->cs, he, value, err);
+  if (!(rc & CSR_SUC_NO_CHANGE))
+  {
+    struct HashElem *he_base = get_base(he);
+    struct EventConfig ec = { sub, he_base->key.strkey, he };
+    notify_send(sub->notify, NT_CONFIG, NT_CONFIG_SET, &ec);
+  }
+  return rc;
 }
 
 /**
