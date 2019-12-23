@@ -72,5 +72,7 @@ int                  cs_subset_native_set(const struct ConfigSubset *sub, struct
 int                  cs_subset_reset     (const struct ConfigSubset *sub, struct HashElem *he,                    struct Buffer *err);
 int                  cs_subset_string_get(const struct ConfigSubset *sub, struct HashElem *he,                    struct Buffer *result);
 int                  cs_subset_string_set(const struct ConfigSubset *sub, struct HashElem *he, const char *value, struct Buffer *err);
+intptr_t cs_subset_native_get2(const struct ConfigSubset *sub, const char *name, struct Buffer *err);
+int cs_subset_native_set2(const struct ConfigSubset *sub, const char *name, intptr_t value, struct Buffer *err);
 
 #endif /* MUTT_CONFIG_SUBSET_H */

@@ -267,3 +267,53 @@ struct HashElem *cs_subset_create_var(const struct ConfigSubset *sub,
 
   return cs_inherit_variable(sub->cs, he, scope);
 }
+
+intptr_t cs_subset_native_get2(const struct ConfigSubset *sub, const char *name, struct Buffer *err)
+{
+  if (!sub || !name)
+    return INT_MIN;
+
+  struct HashElem *he = cs_subset_lookup(sub, name);
+  if (he)
+    return cs_subset_native_get(sub, he, err);
+
+  return cs_subset_native_get2(sub->parent, name, err);
+}
+
+struct HashElem *create_inheritance(const struct ConfigSubset *sub, const char *name)
+{
+  if (!sub || !name)
+    return NULL;
+
+  struct HashElem *he = cs_subset_lookup(sub, name);
+  if (he)
+    return he;
+
+  // Create parent before creating name
+  he = create_inheritance(sub->parent, name);
+
+  char scope[256];
+  snprintf(scope, sizeof(scope), "%s:%s", sub->name, name);
+  return cs_inherit_variable(sub->cs, he, scope);
+}
+
+int cs_subset_native_set2(const struct ConfigSubset *sub, const char *name,
+                         intptr_t value, struct Buffer *err)
+{
+  if (!sub || !name)
+    return CSR_ERR_CODE;
+
+  struct HashElem *he = create_inheritance(sub, name);
+  if (!he)
+    return CSR_ERR_CODE;
+
+  int rc = cs_he_native_set(sub->cs, he, value, err);
+  if (!(rc & CSR_SUC_NO_CHANGE))
+  {
+    struct HashElem *he_base = get_base(he);
+    struct EventConfig ec = { sub, he_base->key.strkey, he };
+    notify_send(sub->notify, NT_CONFIG, NT_CONFIG_SET, &ec);
+  }
+  return rc;
+}
+
