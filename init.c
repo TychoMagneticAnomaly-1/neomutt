@@ -407,7 +407,7 @@ static char *getmailname(void)
  * Use several methods to try to find the Fully-Qualified domain name of this host.
  * If the user has already configured a hostname, this function will use it.
  */
-static bool get_hostname(void)
+static bool get_hostname(struct ConfigSet *cs)
 {
   char *str = NULL;
   struct utsname utsname;
@@ -471,7 +471,7 @@ static bool get_hostname(void)
 #endif
   }
   if (C_Hostname)
-    cs_str_initial_set(Config, "hostname", C_Hostname, NULL);
+    cs_str_initial_set(cs, "hostname", C_Hostname, NULL);
 
   return true;
 }
@@ -2988,12 +2988,13 @@ HookFlags mutt_get_hook_type(const char *name)
 
 /**
  * mutt_init - Initialise NeoMutt
+ * @param cs          Config Set
  * @param skip_sys_rc If true, don't read the system config file
  * @param commands    List of config commands to execute
  * @retval 0 Success
  * @retval 1 Error
  */
-int mutt_init(bool skip_sys_rc, struct ListHead *commands)
+int mutt_init(struct ConfigSet *cs, bool skip_sys_rc, struct ListHead *commands)
 {
   char buf[1024];
   int need_pause = 0;
@@ -3028,8 +3029,8 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
 #endif
     p = buf;
   }
-  cs_str_initial_set(Config, "spoolfile", p, NULL);
-  cs_str_reset(Config, "spoolfile", NULL);
+  cs_str_initial_set(cs, "spoolfile", p, NULL);
+  cs_str_reset(cs, "spoolfile", NULL);
 
   p = mutt_str_getenv("REPLYTO");
   if (p)
@@ -3051,19 +3052,19 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
   p = mutt_str_getenv("EMAIL");
   if (p)
   {
-    cs_str_initial_set(Config, "from", p, NULL);
-    cs_str_reset(Config, "from", NULL);
+    cs_str_initial_set(cs, "from", p, NULL);
+    cs_str_reset(cs, "from", NULL);
   }
 
   /* "$mailcap_path" precedence: config file, environment, code */
   const char *env_mc = mutt_str_getenv("MAILCAPS");
   if (env_mc)
-    cs_str_string_set(Config, "mailcap_path", env_mc, NULL);
+    cs_str_string_set(cs, "mailcap_path", env_mc, NULL);
 
   /* "$tmpdir" precedence: config file, environment, code */
   const char *env_tmp = mutt_str_getenv("TMPDIR");
   if (env_tmp)
-    cs_str_string_set(Config, "tmpdir", env_tmp, NULL);
+    cs_str_string_set(cs, "tmpdir", env_tmp, NULL);
 
   /* "$visual", "$editor" precedence: config file, environment, code */
   const char *env_ed = mutt_str_getenv("VISUAL");
@@ -3071,12 +3072,12 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
     env_ed = mutt_str_getenv("EDITOR");
   if (env_ed)
   {
-    cs_str_string_set(Config, "editor", env_ed, NULL);
-    cs_str_string_set(Config, "visual", env_ed, NULL);
+    cs_str_string_set(cs, "editor", env_ed, NULL);
+    cs_str_string_set(cs, "visual", env_ed, NULL);
   }
 
   C_Charset = mutt_ch_get_langinfo_charset();
-  cs_str_initial_set(Config, "charset", C_Charset, NULL);
+  cs_str_initial_set(cs, "charset", C_Charset, NULL);
   mutt_ch_set_charset(C_Charset);
 
   Matches = mutt_mem_calloc(MatchesListsize, sizeof(char *));
@@ -3138,7 +3139,7 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
 
   if (!STAILQ_EMPTY(&Muttrc))
   {
-    cs_str_string_set(Config, "alias_file", STAILQ_FIRST(&Muttrc)->data, NULL);
+    cs_str_string_set(cs, "alias_file", STAILQ_FIRST(&Muttrc)->data, NULL);
   }
 
   /* Process the global rc file if it exists and the user hasn't explicitly
@@ -3192,7 +3193,7 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
   if (execute_commands(commands) != 0)
     need_pause = 1; // TEST13: neomutt -e broken
 
-  if (!get_hostname())
+  if (!get_hostname(cs))
     goto done;
 
   if (!C_Realname)
@@ -3204,7 +3205,7 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
       C_Realname = mutt_str_strdup(mutt_gecos_name(name, sizeof(name), pw));
     }
   }
-  cs_str_initial_set(Config, "realname", C_Realname, NULL);
+  cs_str_initial_set(cs, "realname", C_Realname, NULL);
 
   if (need_pause && !OptNoCurses)
   {
@@ -3225,7 +3226,7 @@ int mutt_init(bool skip_sys_rc, struct ListHead *commands)
     struct MailboxList ml = neomutt_mailboxlist_get_all(NeoMutt, MUTT_NOTMUCH);
     struct MailboxNode *mp = STAILQ_FIRST(&ml);
     if (mp)
-      cs_str_string_set(Config, "spoolfile", mailbox_path(mp->mailbox), NULL);
+      cs_str_string_set(cs, "spoolfile", mailbox_path(mp->mailbox), NULL);
     neomutt_mailboxlist_clear(&ml);
   }
 #endif

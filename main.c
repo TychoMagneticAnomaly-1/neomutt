@@ -694,7 +694,7 @@ int main(int argc, char *argv[], char *envp[])
   }
 
   /* set defaults and read init files */
-  int rc2 = mutt_init(flags & MUTT_CLI_NOSYSRC, &commands);
+  int rc2 = mutt_init(Config, flags & MUTT_CLI_NOSYSRC, &commands);
   mutt_list_free(&commands);
   if (rc2 != 0)
     goto main_curses;
