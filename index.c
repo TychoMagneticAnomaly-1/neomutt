@@ -889,21 +889,13 @@ void index_make_entry(char *buf, size_t buflen, struct Menu *menu, int line)
     }
   }
 
-  struct Account *a = Context->mailbox->account;
+  // struct Account *a = Context->mailbox->account;
   struct Mailbox *m = Context->mailbox;
   if (m)
   {
     struct Buffer *value = mutt_buffer_pool_get();
-    struct HashElem *he = cs_subset_lookup(m->sub, "index_format");
-    if (he)
-    {
-      cs_subset_string_get(m->sub, he, value);
-    }
-    else
-    {
-      he = cs_subset_lookup(a->sub, "index_format");
-      cs_subset_string_get(a->sub, he, value);
-    }
+    cs_subset_str_string_get(m->sub, "index_format", value);
+
     mutt_make_string_flags(buf, buflen, menu->win_index->state.cols,
                            mutt_b2s(value), Context, m, e, flags);
     mutt_buffer_pool_release(&value);
@@ -2514,7 +2506,7 @@ int mutt_index_menu(struct MuttWindow *dlg)
         /* toggle the weeding of headers so that a user can press the key
          * again while reading the message.  */
         if (op == OP_DISPLAY_HEADERS)
-          bool_str_toggle(Config, "weed", NULL);
+          bool_str_toggle(NeoMutt->sub, "weed", NULL);
 
         OptNeedResort = false;
 
@@ -3898,7 +3890,7 @@ int mutt_index_menu(struct MuttWindow *dlg)
         break;
 
       case OP_SIDEBAR_TOGGLE_VISIBLE:
-        bool_str_toggle(Config, "sidebar_visible", NULL);
+        bool_str_toggle(NeoMutt->sub, "sidebar_visible", NULL);
         mutt_window_reflow(NULL);
         break;
 #endif
@@ -4066,7 +4058,7 @@ struct MuttWindow *index_pager_init(void)
   mutt_window_add_child(panel_pager, win_pager);
   mutt_window_add_child(panel_pager, win_pbar);
 
-  notify_observer_add(Config->notify, mutt_sb_observer, win_sidebar);
+  notify_observer_add(NeoMutt->notify, mutt_sb_observer, win_sidebar);
 
   return dlg;
 }
@@ -4084,7 +4076,7 @@ void index_pager_shutdown(struct MuttWindow *dlg)
   if (!win_sidebar)
     return;
 
-  notify_observer_remove(Config->notify, mutt_sb_observer, win_sidebar);
+  notify_observer_remove(NeoMutt->notify, mutt_sb_observer, win_sidebar);
 }
 
 /**

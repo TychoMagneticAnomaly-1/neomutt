@@ -37,23 +37,6 @@
 #include "set.h"
 
 /**
- * get_base - Find the root Config Item
- * @param he Config Item to examine
- * @retval ptr Root Config Item
- *
- * Given an inherited HashElem, find the HashElem representing the original
- * Config Item.
- */
-static struct HashElem *get_base(struct HashElem *he)
-{
-  if (!(he->type & DT_INHERITED))
-    return he;
-
-  struct Inheritance *i = he->data;
-  return get_base(i->parent);
-}
-
-/**
  * cs_subset_free - Free a Config Subset
  * @param ptr Subset to free
  *
@@ -102,7 +85,8 @@ void cs_subset_free(struct ConfigSubset **ptr)
  *
  * @note The name will be combined with the parent's names
  */
-struct ConfigSubset *cs_subset_new(const char *name, struct ConfigSubset *sub_parent, struct Notify *not_parent)
+struct ConfigSubset *cs_subset_new(const char *name, struct ConfigSubset *sub_parent,
+                                   struct Notify *not_parent)
 {
   struct ConfigSubset *sub = mutt_mem_calloc(1, sizeof(*sub));
 
@@ -151,54 +135,107 @@ struct HashElem *cs_subset_lookup(const struct ConfigSubset *sub, const char *na
 }
 
 /**
- * cs_subset_native_get - Natively get the value of an inherited config item
+ * cs_subset_create_inheritance - XXX
+ */
+struct HashElem *cs_subset_create_inheritance(const struct ConfigSubset *sub, const char *name)
+{
+  if (!sub || !name)
+    return NULL;
+
+  struct HashElem *he = cs_subset_lookup(sub, name);
+  if (he)
+    return he;
+
+  // Create parent before creating name
+  he = cs_subset_create_inheritance(sub->parent, name);
+
+  char scope[256];
+  snprintf(scope, sizeof(scope), "%s:%s", sub->name, name);
+  return cs_inherit_variable(sub->cs, he, scope);
+}
+
+/**
+ * cs_subset_notify_observers - Notify all observers of an event
+ * @param sub  Config Subset
+ * @param he   HashElem representing config item
+ * @param name Name of config item
+ * @param ev   Type of event
+ */
+void cs_subset_notify_observers(const struct ConfigSubset *sub, struct HashElem *he, enum NotifyConfig ev)
+{
+  if (!sub || !he)
+    return;
+
+  struct HashElem *he_base = cs_get_base(he);
+  struct EventConfig ec = { sub, he_base->key.strkey, he };
+  notify_send(sub->notify, NT_CONFIG, ev, &ec);
+}
+
+/**
+ * cs_subset_he_native_get - Natively get the value of an inherited config item
  * @param sub Config Subset
  * @param he  HashElem representing config item
  * @param err Buffer for error messages
  * @retval intptr_t Native pointer/value
  * @retval INT_MIN  Error
  */
-intptr_t cs_subset_native_get(const struct ConfigSubset *sub,
-                              struct HashElem *he, struct Buffer *err)
+intptr_t cs_subset_he_native_get(const struct ConfigSubset *sub, struct HashElem *he, struct Buffer *err)
 {
-  if (!sub || !he)
+  if (!sub)
     return INT_MIN;
 
   return cs_he_native_get(sub->cs, he, err);
 }
 
 /**
- * cs_subset_native_set - Natively set the value of an inherited config item
+ * cs_subset_str_native_get - XXX
+ */
+intptr_t cs_subset_str_native_get(const struct ConfigSubset *sub, const char *name, struct Buffer *err)
+{
+  struct HashElem *he = cs_subset_create_inheritance(sub, name);
+
+  return cs_subset_he_native_get(sub, he, err);
+}
+
+/**
+ * cs_subset_he_native_set - Natively set the value of an inherited config item
  * @param sub   Config Subset
  * @param he    HashElem representing config item
  * @param value Native pointer/value to set
  * @param err   Buffer for error messages
  * @retval num Result, e.g. #CSR_SUCCESS
  */
-int cs_subset_native_set(const struct ConfigSubset *sub, struct HashElem *he,
-                         intptr_t value, struct Buffer *err)
+int cs_subset_he_native_set(const struct ConfigSubset *sub, struct HashElem *he, intptr_t value, struct Buffer *err)
 {
-  if (!sub || !he)
+  if (!sub)
     return CSR_ERR_CODE;
 
   int rc = cs_he_native_set(sub->cs, he, value, err);
-  if (!(rc & CSR_SUC_NO_CHANGE))
-  {
-    struct HashElem *he_base = get_base(he);
-    struct EventConfig ec = { sub, he_base->key.strkey, he };
-    notify_send(sub->notify, NT_CONFIG, NT_CONFIG_SET, &ec);
-  }
+
+  if ((CSR_RESULT(rc) == CSR_SUCCESS) && !(rc & CSR_SUC_NO_CHANGE))
+    cs_subset_notify_observers(sub, he, NT_CONFIG_SET);
+
   return rc;
 }
 
 /**
- * cs_subset_reset - Reset an inherited config item to its parent value
+ * cs_subset_str_native_set - XXX
+ */
+int cs_subset_str_native_set(const struct ConfigSubset *sub, const char *name, intptr_t value, struct Buffer *err)
+{
+  struct HashElem *he = cs_subset_create_inheritance(sub, name);
+
+  return cs_subset_he_native_set(sub, he, value, err);
+}
+
+/**
+ * cs_subset_he_reset - Reset an inherited config item to its parent value
  * @param sub  Config Subset
  * @param he   HashElem representing config item
  * @param err  Buffer for error messages
  * @retval num Result, e.g. #CSR_SUCCESS
  */
-int cs_subset_reset(const struct ConfigSubset *sub, struct HashElem *he, struct Buffer *err)
+int cs_subset_he_reset(const struct ConfigSubset *sub, struct HashElem *he, struct Buffer *err)
 {
   if (!sub || !he)
     return CSR_ERR_CODE;
@@ -207,31 +244,49 @@ int cs_subset_reset(const struct ConfigSubset *sub, struct HashElem *he, struct 
 }
 
 /**
- * cs_subset_string_get - Get an inherited config item as a string
+ * cs_subset_str_reset - XXX
+ */
+int cs_subset_str_reset(const struct ConfigSubset *sub, const char *name, struct Buffer *err)
+{
+  struct HashElem *he = cs_subset_create_inheritance(sub, name);
+
+  return cs_subset_he_reset(sub, he, err);
+}
+
+/**
+ * cs_subset_he_string_get - Get an inherited config item as a string
  * @param sub    Config Subset
  * @param he     HashElem representing config item
  * @param result Buffer for results or error messages
  * @retval num Result, e.g. #CSR_SUCCESS
  */
-int cs_subset_string_get(const struct ConfigSubset *sub, struct HashElem *he,
-                         struct Buffer *result)
+int cs_subset_he_string_get(const struct ConfigSubset *sub, struct HashElem *he, struct Buffer *result)
 {
-  if (!sub || !he)
+  if (!sub)
     return CSR_ERR_CODE;
 
   return cs_he_string_get(sub->cs, he, result);
 }
 
 /**
- * cs_subset_string_set - Set an inherited config item by string
+ * cs_subset_str_string_get - XXX
+ */
+int cs_subset_str_string_get(const struct ConfigSubset *sub, const char *name, struct Buffer *result)
+{
+  struct HashElem *he = cs_subset_create_inheritance(sub, name);
+
+  return cs_subset_he_string_get(sub, he, result);
+}
+
+/**
+ * cs_subset_he_string_set - Set an inherited config item by string
  * @param sub   Config Subset
  * @param he    HashElem representing config item
  * @param value Value to set
  * @param err   Buffer for error messages
  * @retval num Result, e.g. #CSR_SUCCESS
  */
-int cs_subset_string_set(const struct ConfigSubset *sub, struct HashElem *he,
-                         const char *value, struct Buffer *err)
+int cs_subset_he_string_set(const struct ConfigSubset *sub, struct HashElem *he, const char *value, struct Buffer *err)
 {
   if (!sub || !he)
     return INT_MIN;
@@ -240,80 +295,63 @@ int cs_subset_string_set(const struct ConfigSubset *sub, struct HashElem *he,
 }
 
 /**
- * cs_subset_create_var - Create an inherited config item
- * @param sub  Config Subset
- * @param name Name of Config item to create
- * @param err  Buffer for error messages
- * @retval ptr HashElem of the config item
+ * cs_subset_str_string_set - XXX
  */
-struct HashElem *cs_subset_create_var(const struct ConfigSubset *sub,
-                                      const char *name, struct Buffer *err)
+int cs_subset_str_string_set(const struct ConfigSubset *sub, const char *name, const char *value, struct Buffer *err)
 {
-  if (!sub || !name)
-    return NULL;
+  struct HashElem *he = cs_subset_create_inheritance(sub, name);
 
-  // Check if name already exists
-  struct HashElem *he = cs_subset_lookup(sub, name);
-  if (he)
-    return he;
-
-  // Create parent before creating name
-  he = cs_subset_create_var(sub->parent, name, err);
-  if (!he)
-    return NULL;
-
-  char scope[256];
-  snprintf(scope, sizeof(scope), "%s:%s", sub->name, name);
-
-  return cs_inherit_variable(sub->cs, he, scope);
+  return cs_subset_he_string_set(sub, he, value, err);
 }
 
-intptr_t cs_subset_native_get2(const struct ConfigSubset *sub, const char *name, struct Buffer *err)
+const char *subset_get_scope(enum ConfigScope scope)
 {
-  if (!sub || !name)
-    return INT_MIN;
-
-  struct HashElem *he = cs_subset_lookup(sub, name);
-  if (he)
-    return cs_subset_native_get(sub, he, err);
-
-  return cs_subset_native_get2(sub->parent, name, err);
-}
-
-struct HashElem *create_inheritance(const struct ConfigSubset *sub, const char *name)
-{
-  if (!sub || !name)
-    return NULL;
-
-  struct HashElem *he = cs_subset_lookup(sub, name);
-  if (he)
-    return he;
-
-  // Create parent before creating name
-  he = create_inheritance(sub->parent, name);
-
-  char scope[256];
-  snprintf(scope, sizeof(scope), "%s:%s", sub->name, name);
-  return cs_inherit_variable(sub->cs, he, scope);
-}
-
-int cs_subset_native_set2(const struct ConfigSubset *sub, const char *name,
-                         intptr_t value, struct Buffer *err)
-{
-  if (!sub || !name)
-    return CSR_ERR_CODE;
-
-  struct HashElem *he = create_inheritance(sub, name);
-  if (!he)
-    return CSR_ERR_CODE;
-
-  int rc = cs_he_native_set(sub->cs, he, value, err);
-  if (!(rc & CSR_SUC_NO_CHANGE))
+  switch (scope)
   {
-    struct HashElem *he_base = get_base(he);
-    struct EventConfig ec = { sub, he_base->key.strkey, he };
-    notify_send(sub->notify, NT_CONFIG, NT_CONFIG_SET, &ec);
+    case SET_SCOPE_NEOMUTT:
+      return "neomutt";
+    case SET_SCOPE_ACCOUNT:
+      return "account";
+    case SET_SCOPE_MAILBOX:
+      return "mailbox";
+    default:
+      return "unknown";
   }
-  return rc;
 }
 
+void subset_dump(const struct ConfigSubset *sub)
+{
+  for (; sub; sub = sub->parent)
+  {
+    printf("%s: '%s' (%ld)", subset_get_scope(sub->scope), NONULL(sub->name), observer_count(sub->notify));
+    if (sub->parent)
+      printf(" --> ");
+  }
+  printf("\n");
+}
+
+void subset_dump_var2(const struct ConfigSubset *sub, const char *var)
+{
+  if (!sub)
+    return;
+
+  subset_dump_var2(sub->parent, var);
+  if (sub->parent)
+    printf(", ");
+
+  struct HashElem *he = cs_subset_lookup(sub, var);
+  if (he)
+    printf("\033[1;32m");
+  else
+    printf("\033[1;31m");
+
+  printf("%s:%s", NONULL(sub->name), var);
+
+  printf("\033[0m");
+}
+
+void subset_dump_var(const struct ConfigSubset *sub, const char *var)
+{
+  subset_dump_var2(sub, var);
+  printf("\n");
+}

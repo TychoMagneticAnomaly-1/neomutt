@@ -37,5 +37,6 @@ void notify_set_parent(struct Notify *notify, struct Notify *parent);
 bool notify_send(struct Notify *notify, enum NotifyType event_type, int event_subtype, void *event_data);
 bool notify_observer_add(struct Notify *notify, observer_t callback, void *global_data);
 bool notify_observer_remove(struct Notify *notify, observer_t callback, void *global_data);
+size_t observer_count(struct Notify *notify);
 
 #endif /* MUTT_LIB_NOTIFY_H */

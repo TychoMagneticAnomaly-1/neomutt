@@ -1263,12 +1263,12 @@ static enum CommandResult parse_ifdef(struct Buffer *buf, struct Buffer *s,
   mutt_extract_token(buf, s, MUTT_TOKEN_NO_FLAGS);
 
   // is the item defined as:
-  bool res = cs_get_elem(Config, buf->data) // a variable?
-             || feature_enabled(buf->data)  // a compiled-in feature?
-             || is_function(buf->data)      // a function?
-             || mutt_command_get(buf->data) // a command?
-             || myvar_get(buf->data)        // a my_ variable?
-             || mutt_str_getenv(buf->data); // an environment variable?
+  bool res = cs_get_elem(NeoMutt->sub->cs, buf->data) // a variable?
+             || feature_enabled(buf->data)           // a compiled-in feature?
+             || is_function(buf->data)               // a function?
+             || mutt_command_get(buf->data)          // a command?
+             || myvar_get(buf->data)                 // a my_ variable?
+             || mutt_str_getenv(buf->data);          // an environment variable?
 
   if (!MoreArgs(s))
   {
@@ -1384,7 +1384,7 @@ static enum CommandResult parse_mailboxes(struct Buffer *buf, struct Buffer *s,
     struct ConfigSubset *sub = a ? a->sub : NeoMutt->sub;
     struct Buffer *folder = mutt_buffer_pool_get();
     struct HashElem *he = cs_subset_lookup(sub, "folder");
-    cs_subset_string_get(sub, he, folder);
+    cs_subset_he_string_get(sub, he, folder);
     // mutt_message("%s", m->pathbuf->data);
     mx_path_canon2(m, folder->data);
     // mutt_message("%s", m->pathbuf->data);
@@ -1610,20 +1610,17 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
     if (!my)
     {
       sub = ct_get_sub();
-      he = cs_subset_lookup(sub, buf->data);
-      if (!he)
-        he = cs_subset_create_var(sub, buf->data, err);
-
+      he = cs_subset_create_inheritance(sub, buf->data);
       if (!he)
       {
         if (reset && (mutt_str_strcmp(buf->data, "all") == 0))
         {
-          struct HashElem **list = get_elem_list(Config);
+          struct HashElem **list = get_elem_list(NeoMutt->sub->cs);
           if (!list)
             return MUTT_CMD_ERROR;
 
           for (size_t i = 0; list[i]; i++)
-            cs_he_reset(Config, list[i], NULL);
+            cs_he_reset(NeoMutt->sub->cs, list[i], NULL);
 
           FREE(&list);
           break;
@@ -1697,7 +1694,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
       // mutt_buffer_printf(err, "ACT24 reset variable %s", buf->data);
       if (he)
       {
-        rc = cs_he_reset(Config, he, err);
+        rc = cs_he_reset(NeoMutt->sub->cs, he, err);
         if (CSR_RESULT(rc) != CSR_SUCCESS)
           return MUTT_CMD_ERROR;
       }
@@ -1718,7 +1715,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
           mutt_buffer_addstr(err, buf->data);
           mutt_buffer_addch(err, '=');
           mutt_buffer_reset(buf);
-          rc = cs_he_string_get(Config, he, buf);
+          rc = cs_he_string_get(NeoMutt->sub->cs, he, buf);
           if (CSR_RESULT(rc) != CSR_SUCCESS)
           {
             mutt_buffer_addstr(err, buf->data);
@@ -1798,7 +1795,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
             mutt_buffer_dealloc(&scratch);
           }
 
-          rc = cs_subset_string_set(sub, he, buf->data, err);
+          rc = cs_subset_he_string_set(sub, he, buf->data, err);
           if (CSR_RESULT(rc) != CSR_SUCCESS)
             return MUTT_CMD_ERROR;
         }
@@ -1809,7 +1806,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
         if (bq)
         {
           // mutt_buffer_printf(err, "ACT23 set variable %s to 'yes'", buf->data);
-          rc = cs_subset_native_set(sub, he, true, err);
+          rc = cs_subset_he_native_set(sub, he, true, err);
           if (CSR_RESULT(rc) != CSR_SUCCESS)
             return MUTT_CMD_ERROR;
           continue;
@@ -1822,7 +1819,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
             mutt_buffer_addstr(err, buf->data);
             mutt_buffer_addch(err, '=');
             mutt_buffer_reset(buf);
-            rc = cs_he_string_get(Config, he, buf);
+            rc = cs_he_string_get(NeoMutt->sub->cs, he, buf);
             if (CSR_RESULT(rc) != CSR_SUCCESS)
             {
               mutt_buffer_addstr(err, buf->data);
@@ -1860,14 +1857,14 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
       {
         // mutt_buffer_printf(err, "ACT25 TOGGLE bool/quad variable %s", buf->data);
         if (DTYPE(he->type) == DT_BOOL)
-          bool_he_toggle(Config, he, err);
+          bool_he_toggle(NeoMutt->sub, he, err);
         else
-          quad_he_toggle(Config, he, err);
+          quad_he_toggle(NeoMutt->sub->cs, he, err);
       }
       else
       {
         // mutt_buffer_printf(err, "ACT26 UNSET bool/quad variable %s", buf->data);
-        rc = cs_subset_native_set(sub, he, false, err);
+        rc = cs_subset_he_native_set(sub, he, false, err);
         if (CSR_RESULT(rc) != CSR_SUCCESS)
           return MUTT_CMD_ERROR;
       }
@@ -1875,7 +1872,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
     }
     else
     {
-      rc = cs_subset_string_set(sub, he, NULL, err);
+      rc = cs_subset_he_string_set(sub, he, NULL, err);
       if (CSR_RESULT(rc) != CSR_SUCCESS)
         return MUTT_CMD_ERROR;
     }
@@ -2901,7 +2898,7 @@ int mutt_extract_token(struct Buffer *dest, struct Buffer *tok, TokenFlags flags
       {
         struct Buffer result;
         mutt_buffer_init(&result);
-        int rc = cs_str_string_get(Config, var, &result);
+        int rc = cs_str_string_get(NeoMutt->sub->cs, var, &result);
 
         if (CSR_RESULT(rc) == CSR_SUCCESS)
         {
@@ -3346,14 +3343,14 @@ int mutt_query_variables(struct ListHead *queries)
   {
     mutt_buffer_reset(&value);
 
-    struct HashElem *he = cs_get_elem(Config, np->data);
+    struct HashElem *he = cs_get_elem(NeoMutt->sub->cs, np->data);
     if (!he)
     {
       rc = 1;
       continue;
     }
 
-    int rv = cs_he_string_get(Config, he, &value);
+    int rv = cs_he_string_get(NeoMutt->sub->cs, he, &value);
     if (CSR_RESULT(rv) != CSR_SUCCESS)
     {
       rc = 1;
@@ -3371,7 +3368,7 @@ int mutt_query_variables(struct ListHead *queries)
       mutt_buffer_strcpy(&value, tmp.data);
     }
 
-    dump_config_neo(Config, he, &value, NULL, CS_DUMP_NO_FLAGS, stdout);
+    dump_config_neo(NeoMutt->sub->cs, he, &value, NULL, CS_DUMP_NO_FLAGS, stdout);
   }
 
   mutt_buffer_dealloc(&value);
@@ -3785,7 +3782,7 @@ int mutt_var_value_complete(char *buf, size_t buflen, int pos)
 
     var[vlen - 1] = '\0';
 
-    struct HashElem *he = cs_get_elem(Config, var);
+    struct HashElem *he = cs_get_elem(NeoMutt->sub->cs, var);
     if (!he)
     {
       myvarval = myvar_get(var);
@@ -3803,7 +3800,7 @@ int mutt_var_value_complete(char *buf, size_t buflen, int pos)
     {
       struct Buffer value = mutt_buffer_make(256);
       struct Buffer pretty = mutt_buffer_make(256);
-      int rc = cs_he_string_get(Config, he, &value);
+      int rc = cs_he_string_get(NeoMutt->sub->cs, he, &value);
       if (CSR_RESULT(rc) == CSR_SUCCESS)
       {
         pretty_var(value.data, &pretty);

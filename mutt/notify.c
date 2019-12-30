@@ -207,3 +207,18 @@ bool notify_observer_remove(struct Notify *notify, observer_t callback, void *gl
 
   return result;
 }
+
+size_t observer_count(struct Notify *notify)
+{
+  if (!notify)
+    return 0;
+
+  size_t count = 0;
+  struct ObserverNode *np = NULL;
+  STAILQ_FOREACH(np, &notify->observers, entries)
+  {
+    count++;
+  }
+
+  return count;
+}
