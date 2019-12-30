@@ -215,6 +215,7 @@ int bool_he_toggle(struct ConfigSubset *sub, struct HashElem *he, struct Buffer 
   if (DTYPE(he->type) != DT_BOOL)
     return CSR_ERR_CODE;
 
+  // XXX does this cope with inheritance?
   const struct ConfigDef *cdef = he->data;
   char *var = cdef->var;
 

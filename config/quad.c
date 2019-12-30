@@ -216,21 +216,22 @@ static int quad_toggle(int opt)
 
 /**
  * quad_he_toggle - Toggle the value of a quad
- * @param cs  Config items
+ * @param sub Config items
  * @param he  HashElem representing config item
  * @param err Buffer for error messages
  * @retval num Result, e.g. #CSR_SUCCESS
  *
  * @sa quad_toggle()
  */
-int quad_he_toggle(struct ConfigSet *cs, struct HashElem *he, struct Buffer *err)
+int quad_he_toggle(struct ConfigSubset *sub, struct HashElem *he, struct Buffer *err)
 {
-  if (!cs || !he || !he->data)
+  if (!sub || !he || !he->data)
     return CSR_ERR_CODE;
 
   if (DTYPE(he->type) != DT_QUAD)
     return CSR_ERR_CODE;
 
+  // XXX does this cope with inheritance?
   const struct ConfigDef *cdef = he->data;
   char *var = cdef->var;
 
@@ -244,4 +245,20 @@ int quad_he_toggle(struct ConfigSet *cs, struct HashElem *he, struct Buffer *err
   *(char *) var = quad_toggle(value);
 
   return CSR_SUCCESS;
+}
+
+/**
+ * quad_str_toggle - Toggle the value of a quad
+ * @param sub  Config items
+ * @param name HashElem representing config item
+ * @param err  Buffer for error messages
+ * @retval num Result, e.g. #CSR_SUCCESS
+ *
+ * @sa quad_toggle()
+ */
+int quad_str_toggle(struct ConfigSubset *sub, const char *name, struct Buffer *err)
+{
+  struct HashElem *he = cs_subset_create_inheritance(sub, name);
+
+  return quad_he_toggle(sub, he, err);
 }

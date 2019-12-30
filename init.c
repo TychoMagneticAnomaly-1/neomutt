@@ -1859,7 +1859,7 @@ static enum CommandResult parse_set(struct Buffer *buf, struct Buffer *s,
         if (DTYPE(he->type) == DT_BOOL)
           bool_he_toggle(NeoMutt->sub, he, err);
         else
-          quad_he_toggle(NeoMutt->sub->cs, he, err);
+          quad_he_toggle(NeoMutt->sub, he, err);
       }
       else
       {
