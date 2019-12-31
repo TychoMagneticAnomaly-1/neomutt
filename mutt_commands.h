@@ -58,7 +58,21 @@ struct Command
   intptr_t data;    ///< Data or flags to pass to the command
 };
 
-const struct Command *mutt_command_get(const char *s);
-void mutt_commands_apply(void *data, void (*application)(void *, const struct Command *));
+/**
+ * enum MuttSetCommand - Flags for parse_set()
+ */
+enum MuttSetCommand
+{
+  MUTT_SET_SET,   ///< default is to set all vars
+  MUTT_SET_INV,   ///< default is to invert all vars
+  MUTT_SET_UNSET, ///< default is to unset all vars
+  MUTT_SET_RESET, ///< default is to reset all vars to default
+};
+
+/* parameter to parse_mailboxes */
+#define MUTT_NAMED   (1 << 0)
+#define MUTT_VIRTUAL (1 << 1)
+
+extern const struct Command Commands[];
 
 #endif /* MUTT_MUTT_COMMANDS_H */
